@@ -79,9 +79,10 @@ func main() {
 }
 
 func runBot(botState botState) {
+	stdin := bufio.NewReader(os.Stdin)
+
 	for {
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
+		text, _ := stdin.ReadString('\n')
 		var string_cleared string = text
 		string_cleared = strings.Replace(string_cleared, "\n", "", -1)
 		parseInput(string_cleared, botState)
@@ -98,16 +99,16 @@ func parseInput(text string, botState botState) {
 			update_game(stringSlice[2], stringSlice[3], botState)
 		}
 	}
-	if strings.Compare(stringSlice[0], "action") == 0 {
-		print("action target")
+	if stringSlice[0] == "action" {
+		fmt.Printf("no_moves\n")
+
 	}
 }
 
 func update_settings(key string, value string, botState botState) {
-	fmt.Println(key)
-	fmt.Println(value)
+	// fmt.Println(key)
+	// fmt.Println(value)
 	if strings.Compare(key, "timebank") == 0 {
-		fmt.Println("im here")
 
 		maxTimeBank, err := strconv.Atoi(value)
 		handle_errors(err)
@@ -117,15 +118,11 @@ func update_settings(key string, value string, botState botState) {
 		botState.timeBank = timeBank
 	}
 	if strings.Compare(key, "time_per_move") == 0 {
-		fmt.Println("im here2")
-
 		timePerMove, err := strconv.Atoi(value)
 		handle_errors(err)
 		botState.timePerMove = timePerMove
 	}
 	if strings.Compare(key, "candle_interval") == 0 {
-		fmt.Println("im here3")
-
 		candleInterval, err := strconv.Atoi(value)
 		handle_errors(err)
 		botState.candleInterval = candleInterval
@@ -154,23 +151,19 @@ func update_settings(key string, value string, botState botState) {
 		handle_errors(err)
 		botState.transactionFee = transactionFee
 	}
-	fmt.Printf("%+v\n", botState)
+	// fmt.Printf("%+v\n", botState)
 }
 
 func update_game(key string, value string, botState botState) {
-	print("coucou1")
-	print(key)
-
 	if strings.Compare(key, "next_candles") == 0 {
-		print("coucou2")
 		new_candles := strings.Split(value, ";")
 		tmp_date := strings.Split(value, ",")
 		date, err := strconv.Atoi(tmp_date[1])
 		handle_errors(err)
 		botState.date = date
-		for index, candle_str := range new_candles {
-			fmt.Println(index)
-			fmt.Println(candle_str)
+		for _, candle_str := range new_candles {
+			// fmt.Println(index)
+			// fmt.Println(candle_str)
 			candle_infos := strings.Split(candle_str, ",")
 			update_charts(candle_infos, candle_str)
 		}
