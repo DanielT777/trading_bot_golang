@@ -95,7 +95,7 @@ func parseInput(text string, botState botState) {
 	}
 	if strings.Compare(stringSlice[0], "update") == 0 {
 		if stringSlice[1] == "game" {
-			print("update target")
+			update_game(stringSlice[2], stringSlice[3], botState)
 		}
 	}
 	if strings.Compare(stringSlice[0], "action") == 0 {
@@ -158,8 +158,31 @@ func update_settings(key string, value string, botState botState) {
 }
 
 func update_game(key string, value string, botState botState) {
+	print("coucou1")
+	print(key)
+
+	if strings.Compare(key, "next_candles") == 0 {
+		print("coucou2")
+		new_candles := strings.Split(value, ";")
+		tmp_date := strings.Split(value, ",")
+		date, err := strconv.Atoi(tmp_date[1])
+		handle_errors(err)
+		botState.date = date
+		for index, candle_str := range new_candles {
+			fmt.Println(index)
+			fmt.Println(candle_str)
+			candle_infos := strings.Split(candle_str, ",")
+			update_charts(candle_infos, candle_str)
+		}
+
+	}
 
 }
+
+func update_charts(candle_infos []string, candle_str string) {
+
+}
+
 func handle_errors(err error) {
 	if err != nil {
 		fmt.Println(err)
