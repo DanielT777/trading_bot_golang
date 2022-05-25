@@ -112,7 +112,7 @@ func handle_action(botState *botState) {
 	compute_bollinger_bands(botState, botState.charts["USDT_BTC"].close)
 	handle_signals(botState, botState.charts["USDT_BTC"].close)
 	current_closing_price := botState.charts["USDT_BTC"].close[len(botState.charts["USDT_BTC"].close)-1]
-	affordable := dollars / current_closing_price
+	affordable := (dollars / current_closing_price)
 
 	fmt.Printf("My stacks are USDT: %f and BTC: %f. The current closing price is %f . So I can afford %f\n", dollars, btc, current_closing_price, affordable)
 
@@ -121,8 +121,9 @@ func handle_action(botState *botState) {
 		fmt.Fprintf(os.Stderr, "sell USDT_BTC %f at %f", btc, current_closing_price)
 		botState.stats.actionOrder = ""
 	} else if botState.stats.actionOrder == "BUY" && dollars > 0 {
-		fmt.Printf("buy USDT_BTC %f\n", dollars/current_closing_price)
-		fmt.Fprintf(os.Stderr, "buy USDT_BTC %f", dollars/current_closing_price)
+		fmt.Printf("buy USDT_BTC %f\n", (dollars / current_closing_price))
+		// fmt.Fprintf(os.Stderr, "buy USDT_BTC %f", dollars/current_closing_price)
+		botState.stats.actionOrder = ""
 	} else {
 		fmt.Printf("no_moves\n")
 	}
