@@ -93,7 +93,6 @@ func parseInput(text string, botState *botState) {
 	stringSlice := strings.Split(text, " ")
 	if strings.Compare(stringSlice[0], "settings") == 0 {
 		update_settings(stringSlice[1], stringSlice[2], botState)
-		fmt.Printf("\n\n%v\n\n", botState)
 
 	}
 	if strings.Compare(stringSlice[0], "update") == 0 {
@@ -109,14 +108,25 @@ func parseInput(text string, botState *botState) {
 func handle_action(botState *botState) {
 	dollars := botState.stacks["USDT"]
 	btc := botState.stacks["BTC"]
-	fmt.Printf("LEN OF CLOSE => %d", len(botState.charts["USDT_BTC"].close))
 	get_moving_average(botState, botState.charts["USDT_BTC"].close, botState.charts["USDT_BTC"].high, botState.charts["USDT_BTC"].low)
 	compute_bollinger_bands(botState, botState.charts["USDT_BTC"].close)
 	handle_signals(botState, botState.charts["USDT_BTC"].close)
 	current_closing_price := botState.charts["USDT_BTC"].close[len(botState.charts["USDT_BTC"].close)-1]
 	affordable := dollars / current_closing_price
 
-	fmt.Printf("My stacks are USDT: %f and BTC: %f. The current closing price is %f . So I can afford %f", dollars, btc, current_closing_price, affordable)
+	fmt.Printf("My stacks are USDT: %f and BTC: %f. The current closing price is %f . So I can afford %f\n", dollars, btc, current_closing_price, affordable)
+
+	if botState.stats.actionOrder == "SELL" && btc > 0 {
+		fmt.Printf("sell USDT_BTC %f\n", btc)
+		fmt.Fprintf(os.Stderr, "sell USDT_BTC %f at %f", btc, current_closing_price)
+		botState.stats.actionOrder = ""
+	} else if botState.stats.actionOrder == "BUY" && dollars > 0 {
+		fmt.Printf("buy USDT_BTC %f\n", dollars/current_closing_price)
+		fmt.Fprintf(os.Stderr, "buy USDT_BTC %f", dollars/current_closing_price)
+	} else {
+		fmt.Printf("no_moves\n")
+	}
+
 }
 
 func get_moving_average(botState *botState, close []float64, highs []float64, lows []float64) {
@@ -149,7 +159,6 @@ func get_lower_band(botState *botState, close []float64) {
 	i := len(close) - 1
 	j := 0
 
-	fmt.Println(close)
 	for j != SMA_PERIOD+1 {
 		deviationArray = append(deviationArray, close[i])
 		i = i - 1
@@ -158,8 +167,6 @@ func get_lower_band(botState *botState, close []float64) {
 
 	SMA_STANDARD_DEVIATION := StdDev(deviationArray)
 	temp_LOWER_BB := STOCK_SMA - float64(STANDARD_DEVIATION_MULTIPLIER)*SMA_STANDARD_DEVIATION
-	fmt.Println("temp_LOWER_BB")
-	fmt.Println(temp_LOWER_BB)
 
 	botState.stats.LOWER_BB = append(botState.stats.LOWER_BB, temp_LOWER_BB)
 }
@@ -170,7 +177,6 @@ func get_upper_band(botState *botState, close []float64) {
 	i := len(close) - 1
 	j := 0
 
-	fmt.Println(close)
 	for j != SMA_PERIOD+1 {
 		deviationArray = append(deviationArray, close[i])
 		i = i - 1
@@ -179,8 +185,6 @@ func get_upper_band(botState *botState, close []float64) {
 
 	SMA_STANDARD_DEVIATION := StdDev(deviationArray)
 	temp_UPPER_BB := STOCK_SMA + float64(STANDARD_DEVIATION_MULTIPLIER)*SMA_STANDARD_DEVIATION
-	fmt.Println("temp_UPPER_BB")
-	fmt.Println(temp_UPPER_BB)
 
 	botState.stats.UPPER_BB = append(botState.stats.UPPER_BB, temp_UPPER_BB)
 }
@@ -197,8 +201,6 @@ func get_slow_moving_average(botState *botState, close []float64, highs []float6
 		i = i - 1
 		j = j + 1
 	}
-
-	fmt.Printf("\n\n\ntemp_SMA => %f\n\n\n", (temp_SMA / float64(SMA_PERIOD)))
 
 	botState.stats.SMA = append(botState.stats.SMA, temp_SMA/float64(SMA_PERIOD))
 }
