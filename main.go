@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -15,8 +16,8 @@ type botStatistics struct {
 	SMA         []float64
 	FMA         []float64
 	EMA         []float64
-	UPPER_BB    []int
-	LOWER_BB    []int
+	UPPER_BB    []float64
+	LOWER_BB    []float64
 	actionOrder string
 }
 
@@ -110,43 +111,78 @@ func handle_action(botState *botState) {
 	btc := botState.stacks["BTC"]
 	fmt.Printf("LEN OF CLOSE => %d", len(botState.charts["USDT_BTC"].close))
 	get_moving_average(botState, botState.charts["USDT_BTC"].close, botState.charts["USDT_BTC"].high, botState.charts["USDT_BTC"].low)
+	compute_bollinger_bands(botState, botState.charts["USDT_BTC"].close)
+	handle_signals(botState, botState.charts["USDT_BTC"].close)
 	current_closing_price := botState.charts["USDT_BTC"].close[len(botState.charts["USDT_BTC"].close)-1]
 	affordable := dollars / current_closing_price
+
 	fmt.Printf("My stacks are USDT: %f and BTC: %f. The current closing price is %f . So I can afford %f", dollars, btc, current_closing_price, affordable)
 }
 
 func get_moving_average(botState *botState, close []float64, highs []float64, lows []float64) {
 	get_slow_moving_average(botState, close, highs, lows)
+}
 
-	fmt.Printf("\n\n LEN FMA => %d\n\n", len(botState.stats.FMA))
-	fmt.Printf("\n\n LEN EMA => %d\n\n", len(botState.stats.EMA))
-	fmt.Printf("\n\n LEN SMA => %d\n\n", len(botState.stats.SMA))
-
-	// If the FMA crosses below the SMA/EMA => SELL
-	// if self.FMA[len(self.FMA) - 1] < self.SMA[len(self.SMA) -1] and self.FMA[len(self.FMA)-2] > self.SMA[len(self.SMA)-2]:
-
-	if botState.stats.FMA[len(botState.stats.FMA)-1] < botState.stats.SMA[len(botState.stats.SMA)-1] {
-		if botState.stats.FMA[len(botState.stats.FMA)-2] > botState.stats.SMA[len(botState.stats.SMA)-2] {
+func handle_signals(botState *botState, close []float64) {
+	// if closes[-2] < self.UPPER_BB[len(self.UPPER_BB)-2] and closes[-1] > self.UPPER_BB[len(self.UPPER_BB)-1]:
+	// 	self.actionOrder = "SELL"
+	if len(botState.stats.UPPER_BB) > 1 {
+		if close[len(close)-2] < botState.stats.UPPER_BB[len(botState.stats.UPPER_BB)-2] && close[len(close)-1] > botState.stats.UPPER_BB[len(botState.stats.UPPER_BB)-1] {
 			botState.stats.actionOrder = "SELL"
 		}
 	}
-
-	if botState.stats.FMA[len(botState.stats.FMA)-1] > botState.stats.SMA[len(botState.stats.SMA)-1] {
-		if botState.stats.FMA[len(botState.stats.FMA)-2] < botState.stats.SMA[len(botState.stats.SMA)-2] {
+	if len(botState.stats.LOWER_BB) > 1 {
+		if close[len(close)-2] > botState.stats.LOWER_BB[len(botState.stats.LOWER_BB)-2] && close[len(close)-1] < botState.stats.LOWER_BB[len(botState.stats.LOWER_BB)-1] {
 			botState.stats.actionOrder = "BUY"
 		}
 	}
-
 }
 
 func compute_bollinger_bands(botState *botState, close []float64) {
 	get_lower_band(botState, close)
+	get_upper_band(botState, close)
 }
 
 func get_lower_band(botState *botState, close []float64) {
-	temp_LOWER_BB := 0
 	STOCK_SMA := botState.stats.SMA[len(botState.stats.SMA)-1]
+	var deviationArray []float64
+	i := len(close) - 1
+	j := 0
 
+	fmt.Println(close)
+	for j != SMA_PERIOD+1 {
+		deviationArray = append(deviationArray, close[i])
+		i = i - 1
+		j = j + 1
+	}
+
+	SMA_STANDARD_DEVIATION := StdDev(deviationArray)
+	temp_LOWER_BB := STOCK_SMA - float64(STANDARD_DEVIATION_MULTIPLIER)*SMA_STANDARD_DEVIATION
+	fmt.Println("temp_LOWER_BB")
+	fmt.Println(temp_LOWER_BB)
+
+	botState.stats.LOWER_BB = append(botState.stats.LOWER_BB, temp_LOWER_BB)
+}
+
+func get_upper_band(botState *botState, close []float64) {
+	STOCK_SMA := botState.stats.SMA[len(botState.stats.SMA)-1]
+	var deviationArray []float64
+	i := len(close) - 1
+	j := 0
+
+	fmt.Println(close)
+	for j != SMA_PERIOD+1 {
+		deviationArray = append(deviationArray, close[i])
+		i = i - 1
+		j = j + 1
+	}
+
+	SMA_STANDARD_DEVIATION := StdDev(deviationArray)
+	temp_UPPER_BB := STOCK_SMA + float64(STANDARD_DEVIATION_MULTIPLIER)*SMA_STANDARD_DEVIATION
+	fmt.Println("temp_UPPER_BB")
+	fmt.Println(temp_UPPER_BB)
+
+	botState.stats.UPPER_BB = append(botState.stats.UPPER_BB, temp_UPPER_BB)
 }
 
 func get_slow_moving_average(botState *botState, close []float64, highs []float64, lows []float64) {
@@ -316,4 +352,28 @@ func handle_errors(err error) {
 		fmt.Println(err)
 		os.Exit(2)
 	}
+}
+
+func Variance(xs []float64) float64 {
+	if len(xs) == 0 {
+		return math.NaN()
+	} else if len(xs) <= 1 {
+		return 0
+	}
+
+	// Based on Wikipedia's presentation of Welford 1962
+	// (http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm).
+	// This is more numerically stable than the standard two-pass
+	// formula and not prone to massive cancellation.
+	mean, M2 := 0.0, 0.0
+	for n, x := range xs {
+		delta := x - mean
+		mean += delta / float64(n+1)
+		M2 += delta * (x - mean)
+	}
+	return M2 / float64(len(xs)-1)
+}
+
+func StdDev(xs []float64) float64 {
+	return math.Sqrt(Variance(xs))
 }
