@@ -113,16 +113,19 @@ func handle_action(botState *botState) {
 	handle_signals(botState, botState.charts["USDT_BTC"].close)
 	current_closing_price := botState.charts["USDT_BTC"].close[len(botState.charts["USDT_BTC"].close)-1]
 	affordable := (dollars / current_closing_price)
+	fmt.Println(dollars)
+	fmt.Println(current_closing_price)
+	fmt.Println(dollars / current_closing_price)
+	fmt.Println(affordable)
 
-	fmt.Printf("My stacks are USDT: %f and BTC: %f. The current closing price is %f . So I can afford %f\n", dollars, btc, current_closing_price, affordable)
-
+	fmt.Printf("My stacks are USDT: %v and BTC: %v. The current closing price is %v . So I can afford %v\n", dollars, btc, current_closing_price, affordable)
 	if botState.stats.actionOrder == "SELL" && btc > 0 {
-		fmt.Printf("sell USDT_BTC %f\n", btc)
-		fmt.Fprintf(os.Stderr, "sell USDT_BTC %f at %f", btc, current_closing_price)
+		fmt.Printf("sell USDT_BTC %v\n", btc)
+		fmt.Fprintf(os.Stderr, "sell USDT_BTC %v at %v", btc, current_closing_price)
 		botState.stats.actionOrder = ""
 	} else if botState.stats.actionOrder == "BUY" && dollars > 0 {
-		fmt.Printf("buy USDT_BTC %f\n", (dollars / current_closing_price))
-		// fmt.Fprintf(os.Stderr, "buy USDT_BTC %f", dollars/current_closing_price)
+		fmt.Printf("buy USDT_BTC %v\n", (dollars / current_closing_price))
+		fmt.Fprintf(os.Stderr, "buy USDT_BTC %v", dollars/current_closing_price)
 		botState.stats.actionOrder = ""
 	} else {
 		fmt.Printf("no_moves\n")
